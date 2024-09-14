@@ -6,6 +6,109 @@ mp_drawing_styles = mp.solutions.drawing_styles #เปลี่ยนสไต�
 mp_hands = mp.solutions.hands #รับข้อมูลมือ
 
 capture = cv2.VideoCapture(0) #กล้องที่ใช้ในการจับภาพคือกล้อง webcam(เลข0)
+
+def light_or_airCon(handLandmarks, handLabel):
+    #ตรวจสอบ นิ้วชี้ กลาง นาง ก้อย โป้ง ตามลำดับ
+    #เมื่อชูนิ้วโป้ง มือซ้าย ปลายนิ้วโป้งจะอยู่ทางขวาของข้อนิ้วโป้งในหน้ามือ และมือขวา ปลายนิ้วโป้งจะอยู่ทางซ้ายของข้อนิ้วโป้งในหน้ามือ
+
+    # 1 นิ้ว เลือกไฟ
+    if (handLandmarks[8][1] < handLandmarks[6][1] and 
+        handLandmarks[12][1] > handLandmarks[10][1] and 
+        handLandmarks[16][1] > handLandmarks[14][1] and 
+        handLandmarks[20][1] > handLandmarks[18][1] and 
+        ((handLabel == "Left" and handLandmarks[4][0] < handLandmarks[3][0]) or 
+        (handLabel == "Right" and handLandmarks[4][0] > handLandmarks[3][0]))):
+        return("light")
+
+    # 2 นิ้ว เพื่อเลือกเครื่องปรับอากาศ
+    elif (handLandmarks[8][1] < handLandmarks[6][1] and 
+          handLandmarks[12][1] < handLandmarks[10][1] and 
+          handLandmarks[16][1] > handLandmarks[14][1] and 
+          handLandmarks[20][1] > handLandmarks[18][1] and 
+          ((handLabel == "Left" and handLandmarks[4][0] < handLandmarks[3][0]) or 
+          (handLabel == "Right" and handLandmarks[4][0] > handLandmarks[3][0]))):
+        return("airCon")
+    return ""
+
+def turn_on_or_off(handLandmarks, handLabel):
+    # 5 นิ้ว เพื่อเลือกว่าจะเปิด
+    if (handLandmarks[8][1] < handLandmarks[6][1] and 
+          handLandmarks[12][1] < handLandmarks[10][1] and 
+          handLandmarks[16][1] < handLandmarks[14][1] and 
+          handLandmarks[20][1] < handLandmarks[18][1] and 
+          handLandmarks[8][1] < handLandmarks[5][1] and 
+          handLandmarks[12][1] < handLandmarks[9][1] and 
+          handLandmarks[16][1] < handLandmarks[13][1] and 
+          handLandmarks[20][1] < handLandmarks[17][1] and 
+          handLandmarks[2][1] > handLandmarks[5][1] and 
+          ((handLabel == "Left" and handLandmarks[4][0] > handLandmarks[3][0]) or 
+          (handLabel == "Right" and handLandmarks[4][0] < handLandmarks[3][0]))):
+        return("turn on")
+    elif ((handLandmarks[0][1] > handLandmarks[2][1] and
+            handLandmarks[8][1] > handLandmarks[6][1] and
+            handLandmarks[12][1] > handLandmarks[10][1] and
+            handLandmarks[16][1] > handLandmarks[14][1] and
+            handLandmarks[20][1] > handLandmarks[18][1] and
+            handLandmarks[4][1] < handLandmarks[8][1] and
+            handLandmarks[3][1] > handLandmarks[6][1])):
+          return("turn off")
+    return("")
+
+def adjust_light(handLandmarks):
+    thumb_tip = handLandmarks[4]
+    index_tip = handLandmarks[8]
+    thumb_base = handLandmarks[2]
+    index_base = handLandmarks[5]
+
+    thumb_index_distance = ((thumb_tip[0] - index_tip[0]) ** 2 + (thumb_tip[1] - index_tip[1]) ** 2) ** 0.5
+    thumb_base_index_distance = ((thumb_base[0] - index_base[0]) ** 2 + (thumb_base[1] - index_base[1]) ** 2) ** 0.5
+    
+    if (thumb_index_distance < 0.05 and 
+        thumb_base_index_distance < 0.2 and
+        handLandmarks[12][1] < handLandmarks[10][1] and
+        handLandmarks[16][1] < handLandmarks[14][1] and
+        handLandmarks[20][1] < handLandmarks[18][1] and
+        handLandmarks[12][1] < handLandmarks[9][1] and 
+        handLandmarks[16][1] < handLandmarks[13][1] and 
+        handLandmarks[20][1] < handLandmarks[17][1] and
+        handLandmarks[2][1] > handLandmarks[5][1] ):
+        return "adjust light"
+    return ("")
+
+def adjust_airCon(handLandmarks):
+    count = 0
+    if ((handLandmarks[6][1] < handLandmarks[5][1]) and 
+        (handLandmarks[6][1] < handLandmarks[9][1]) and 
+        (handLandmarks[6][1] < handLandmarks[13][1]) and 
+        (handLandmarks[6][1] < handLandmarks[17][1])):
+      count += 2
+    if (handLandmarks[4][1] < handLandmarks[5][1]):
+      count += 2
+    if ((handLandmarks[6][1] > handLandmarks[5][1]) and 
+        (handLandmarks[6][1] > handLandmarks[9][1]) and 
+        (handLandmarks[6][1] > handLandmarks[13][1]) and 
+        (handLandmarks[6][1] > handLandmarks[17][1])):
+      count += 3
+    if (handLandmarks[4][1] > handLandmarks[5][1]):
+      count += 3
+    if count == 4: 
+      return("increase")
+    if count == 6: 
+      return("decrease")
+    count = 0
+    print("")
+    return("")
+
+def end_work(handLandmarks):
+    if (handLandmarks[0][1] > handLandmarks[2][1] and
+      handLandmarks[8][1] > handLandmarks[6][1] and
+      handLandmarks[12][1] > handLandmarks[10][1] and
+      handLandmarks[16][1] > handLandmarks[14][1] and
+      handLandmarks[20][1] > handLandmarks[18][1] 
+       ):
+        return ("end")
+    return("")
+
 with mp_hands.Hands( #ข้อมูลมือ
   model_complexity=0, #ความซับซ้อนต่ำ
   min_detection_confidence=0.5, #ความมั่นใจขั้นต่ำในการตรวจจับมือ
@@ -22,7 +125,7 @@ with mp_hands.Hands( #ข้อมูลมือ
     image.flags.writeable = True #ตั้งกลับเป็น true เพื่อวาดจุดและเส้นบนมือ
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
-    fingerCount = 0
+    outcome = 0
 
     if results.multi_hand_landmarks: #ตำแหน่งของมือ 21 จุด คิดเป็นเปอร์เซ็นต์ของภาพ
       for hand_landmarks in results.multi_hand_landmarks: #วนในแต่ละมือที่จับได้
@@ -34,20 +137,14 @@ with mp_hands.Hands( #ข้อมูลมือ
         for landmarks in hand_landmarks.landmark: #เพิ่มตำแหน่งลงไป
           handLandmarks.append([landmarks.x, landmarks.y])
         
-        #นิ้วโป้ง
-        if handLabel == "Left" and handLandmarks[4][0] > handLandmarks[3][0]: #มือซ้าย ปลายนิ้วโป้งจะอยู่ทางขวาของข้อนิ้วโป้งในหน้ามือ
-          fingerCount = fingerCount + 1
-        elif handLabel == "Right" and handLandmarks[4][0] < handLandmarks[3][0]: #มือซ้าย ปลายนิ้วโป้งจะอยู่ทางซ้ายของข้อนิ้วโป้งในหน้ามือ
-          fingerCount = fingerCount + 1
-
-        if handLandmarks[8][1] < handLandmarks[6][1]: #นิ้วชี้
-          fingerCount = fingerCount + 1
-        if handLandmarks[12][1] < handLandmarks[10][1]: #นิ้วกลาง
-          fingerCount = fingerCount + 1
-        if handLandmarks[16][1] < handLandmarks[14][1]: #นิ้วนาง
-          fingerCount = fingerCount + 1
-        if handLandmarks[20][1] < handLandmarks[18][1]: #นิ้วก้อย
-          fingerCount = fingerCount + 1
+        # เลือกว่าจะควบคุมไฟหรือเครื่องปรับอากาศ
+        outcome = light_or_airCon(handLandmarks, handLabel)
+        if outcome == "" :
+          outcome = turn_on_or_off(handLandmarks, handLabel)
+          if outcome == "" :
+              outcome = adjust_light(handLandmarks)
+              if outcome == "" :
+                 outcome = adjust_airCon(handLandmarks)
 
         mp_drawing.draw_landmarks( #วาดจุดและเส้นบนมือ
           image, #ภาพจากกล้อง
@@ -57,8 +154,8 @@ with mp_hands.Hands( #ข้อมูลมือ
           mp_drawing_styles.get_default_hand_connections_style()
         )
 
-    cv2.putText(image, str(fingerCount), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) #แสดงจำนวนนิ้วที่นับได้บนภาพ
-    cv2.imshow('FingerCounting Apps',image) #แสดงผลสิ่งที่กล้องจับได้
+    cv2.putText(image, str(outcome), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) #แสดงจำนวนนิ้วที่นับได้บนภาพ
+    cv2.imshow('outcomeing Apps',image) #แสดงผลสิ่งที่กล้องจับได้
     if cv2.waitKey(1) == 27: #กด ESC เพื่อออกจากโปรแกรม
         break
   capture.release() #ปิดกล้อง
