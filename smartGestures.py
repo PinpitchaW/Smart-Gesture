@@ -80,7 +80,8 @@ def adjust_airCon(handLandmarks):
     if ((handLandmarks[6][1] < handLandmarks[5][1]) and 
         (handLandmarks[6][1] < handLandmarks[9][1]) and 
         (handLandmarks[6][1] < handLandmarks[13][1]) and 
-        (handLandmarks[6][1] < handLandmarks[17][1])):
+        (handLandmarks[6][1] < handLandmarks[17][1]) and
+        (handLandmarks[8][1] < handLandmarks[10][1])):
       count += 2
     if (handLandmarks[4][1] < handLandmarks[5][1]):
       count += 2
@@ -144,7 +145,9 @@ with mp_hands.Hands( #ข้อมูลมือ
           if outcome == "" :
               outcome = adjust_light(handLandmarks)
               if outcome == "" :
-                 outcome = adjust_airCon(handLandmarks)
+                  outcome = adjust_airCon(handLandmarks)
+                  if outcome == "" :
+                    outcome = end_work(handLandmarks)
 
         mp_drawing.draw_landmarks( #วาดจุดและเส้นบนมือ
           image, #ภาพจากกล้อง
