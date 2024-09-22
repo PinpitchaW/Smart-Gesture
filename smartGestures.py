@@ -41,6 +41,7 @@ def turn_on_or_off(handLandmarks, handLabel):
           handLandmarks[16][1] < handLandmarks[13][1] and 
           handLandmarks[20][1] < handLandmarks[17][1] and 
           handLandmarks[2][1] > handLandmarks[5][1] and 
+          handLandmarks[8][1] < handLandmarks[11][1] and 
           ((handLabel == "Left" and handLandmarks[4][0] > handLandmarks[3][0]) or 
           (handLabel == "Right" and handLandmarks[4][0] < handLandmarks[3][0]))):
         return("turn on")
@@ -129,7 +130,7 @@ with mp_hands.Hands( #ข้อมูลมือ
 
   thumb_y = None
   index_y = None
-  mode = None
+  mode = 'None'
   # light = "off"
   # airCon ="off"
 
@@ -146,7 +147,6 @@ with mp_hands.Hands( #ข้อมูลมือ
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     outcome = ""
-    
     if results.multi_hand_landmarks: #ตำแหน่งของมือ 21 จุด คิดเป็นเปอร์เซ็นต์ของภาพ
       for hand_landmarks in results.multi_hand_landmarks: #วนในแต่ละมือที่จับได้
         handIndex = results.multi_hand_landmarks.index(hand_landmarks)
@@ -157,7 +157,7 @@ with mp_hands.Hands( #ข้อมูลมือ
         for landmarks in hand_landmarks.landmark: #เพิ่มตำแหน่งลงไป
           handLandmarks.append([landmarks.x, landmarks.y])
 
-        if mode == None :
+        if mode == 'None' :
           # เลือกว่าจะควบคุมไฟหรือเครื่องปรับอากาศ
           outcome = light_or_airCon(handLandmarks, handLabel)
           if outcome == "light" :
@@ -173,9 +173,9 @@ with mp_hands.Hands( #ข้อมูลมือ
             elif outcome == "turn off" :
               print('turn off')
 
-            outcome = end_work(handLandmarks)
-            if outcome == "end" :
-                mode = None
+              outcome = end_work(handLandmarks)
+              if outcome == "end" :
+                  mode = 'None'
 
         elif mode == "airCon" :
             outcome = turn_on_or_off(handLandmarks, handLabel)
@@ -186,7 +186,7 @@ with mp_hands.Hands( #ข้อมูลมือ
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
-                mode = None
+                mode = 'None'
       
         elif mode == "light-on" :
             outcome, thumb_y, index_y = adjust_light(handLandmarks, thumb_y, index_y)
@@ -197,7 +197,7 @@ with mp_hands.Hands( #ข้อมูลมือ
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
-                mode = None
+                mode = 'None'
 
         elif mode == "airCon-on" :
             outcome = adjust_airCon(handLandmarks)
@@ -208,8 +208,9 @@ with mp_hands.Hands( #ข้อมูลมือ
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
-                mode = None  
-        # # เลือกว่าจะควบคุมไฟหรือเครื่องปรับอากาศ
+                mode = 'None'  
+
+        # เลือกว่าจะควบคุมไฟหรือเครื่องปรับอากาศ
         # outcome = light_or_airCon(handLandmarks, handLabel)
         # if outcome == "" :
         #   outcome = turn_on_or_off(handLandmarks, handLabel)
@@ -230,7 +231,7 @@ with mp_hands.Hands( #ข้อมูลมือ
           mp_drawing_styles.get_default_hand_connections_style()
         )
 
-    cv2.putText(image, str(outcome), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) #แสดงจำนวนนิ้วที่นับได้บนภาพ
+    cv2.putText(image, str(mode+' '+outcome), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) #แสดงจำนวนนิ้วที่นับได้บนภาพ
     cv2.imshow('outcomeing Apps',image) #แสดงผลสิ่งที่กล้องจับได้
     if cv2.waitKey(100) == 27: #กด ESC เพื่อออกจากโปรแกรม
         break
