@@ -304,7 +304,7 @@ with mp_hands.Hands( #ข้อมูลมือ
     #   final_outcome = max(outcome_counts, key=outcome_counts.get)
     #   print(light)
     
-    # print(final_outcome)
+    print(final_outcome)
     if time.time() - start_time >= count_duration:
             # Get the final outcome based on counts
             outcome_counts = {
