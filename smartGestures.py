@@ -1,6 +1,21 @@
 import cv2
 import mediapipe as mp
 import math
+import paho.mqtt.client as paho
+from paho import mqtt
+
+mqtt_server = "192.168.6.34"  
+client = paho.Client(client_id="", userdata=None, protocol=paho.MQTTv5)
+client.username_pw_set("manpookungZ", "lefq2341") 
+
+client.loop_start()
+
+try:
+    client.connect(mqtt_server, 1883)
+    print("Connected to MQTT broker")
+except Exception as e:
+    print("Failed to connect to MQTT broker:", e)
+
 
 mp_drawing = mp.solutions.drawing_utils #วาดจุดและเส้นบนมือที่จับได้
 mp_drawing_styles = mp.solutions.drawing_styles #เปลี่ยนสไตล์การวาด
@@ -19,7 +34,6 @@ count = 0
 
 def light_or_airCon(handLandmarks, handLabel):
     #ตรวจสอบ นิ้วชี้ กลาง นาง ก้อย โป้ง ตามลำดับ
-    #เมื่อชูนิ้วโป้ง มือซ้าย ปลายนิ้วโป้งจะอยู่ทางขวาของข้อนิ้วโป้งในหน้ามือ และมือขวา ปลายนิ้วโป้งจะอยู่ทางซ้ายของข้อนิ้วโป้งในหน้ามือ
 
     # 1 นิ้ว เลือกไฟ
     if (handLandmarks[8][1] < handLandmarks[6][1] and 
@@ -58,6 +72,7 @@ def turn_on_or_off(handLandmarks, handLabel, device, current_light):
           (handLabel == "Right" and handLandmarks[4][0] < handLandmarks[3][0]))):
         if device == "light" :
            current_light = 1
+           
         return("turn on", current_light)
     elif ((handLandmarks[0][1] > handLandmarks[2][1] and
             handLandmarks[8][1] > handLandmarks[6][1] and
@@ -74,6 +89,7 @@ def turn_on_or_off(handLandmarks, handLabel, device, current_light):
             ):
           if device == "light" :
            current_light = 0
+           
           return("turn off", current_light)
     return("", current_light)
 
@@ -111,11 +127,12 @@ def adjust_light(handLandmarks, prev_thumb_y=None, prev_index_y=None, current_li
                 new_light = max(0, min(1, current_light + 0.1))
                 current_light = new_light
                 return "increase", current_light, thumb_tip[1], index_tip[1]
-            
+
         return "adjust light", current_light, thumb_tip[1], index_tip[1]
     return ("", current_light, thumb_tip[1], index_tip[1])
 
 def adjust_airCon(handLandmarks):
+    # function จับสัญญาณมือท่าเพิ่ม/ลดแอร์
     count = 0
     if ((handLandmarks[6][1] < handLandmarks[5][1]) and 
         (handLandmarks[6][1] < handLandmarks[9][1]) and 
@@ -158,9 +175,6 @@ def end_work(handLandmarks):
         handLandmarks[20][1] > handLandmarks[18][1] and
         handLandmarks[3][1] > handLandmarks[8][1] and
         handLandmarks[3][1] > handLandmarks[20][1]
-      # and
-      # ((handLabel == "Left" and handLandmarks[18][0] < handLandmarks[20][0]) or 
-      # (handLabel == "Right" and handLandmarks[18][0] > handLandmarks[20][0]))
        ):
         print('endssssssss')
         return ("end")
@@ -206,8 +220,11 @@ with mp_hands.Hands( #ข้อมูลมือ
             # เลือกว่าจะเปิดหรือปิดไฟ
             outcome, current_light = turn_on_or_off(handLandmarks, handLabel,"light", current_light)
             if outcome == "turn on" :
+              client.publish("control", payload=2002, qos=2)
+              print("Published turn on command")
               mode = "light-on"
             elif outcome == "turn off" :
+              client.publish("control", payload=2001, qos=2)
               print('turn off', current_light)
 
             outcome = end_work(handLandmarks)
@@ -215,10 +232,13 @@ with mp_hands.Hands( #ข้อมูลมือ
                 mode = 'None'
 
         elif mode == "airCon" :
+            # เลือกว่าจะเปิดหรือปิดแอร์
             outcome,_ = turn_on_or_off(handLandmarks, handLabel,"airCon", 0)
             if outcome == "turn on" :
+              client.publish("control", payload=1002, qos=2)
               mode = "airCon-on"
             elif outcome == "turn off" :
+              client.publish("control", payload=1001, qos=2)
               print('turn off')
 
             outcome = end_work(handLandmarks)
@@ -226,43 +246,38 @@ with mp_hands.Hands( #ข้อมูลมือ
                 mode = 'None'
       
         elif mode == "light-on" :
+            # เลือกว่าจะเปิดเพิ่มหรือลดไฟ
             outcome, current_light, thumb_y, index_y = adjust_light(handLandmarks, thumb_y, index_y, current_light)
-            print(math.floor(current_light*100))
+            estimate_light = math.floor(current_light*100)
+            print()
+            mqtt_newlight = 0
             if outcome == "increase" :
+              mqtt_newlight = 2000 + estimate_light
               print('increase')
             elif outcome == "decrease" :
+              mqtt_newlight = 2000 + estimate_light
               print('decrease')
+            client.publish("control", payload=int(mqtt_newlight), qos=2)
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
+                client.publish("con", payload=0, qos=2)
                 mode = 'None'
 
         elif mode == "airCon-on" :
+            # เลือกว่าจะเปิดเพิ่มหรือลดแอร์
             outcome = adjust_airCon(handLandmarks)
             if outcome == "increase" :
+              client.publish("control", payload=1003, qos=2)
               print('increase')
             elif outcome == "decrease" :
+              client.publish("control", payload=1004, qos=2)
               print('decrease')
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
+                client.publish("con", payload=0, qos=2)
                 mode = 'None'  
-
-        # if count < 10 :
-        #    count += 1
-        
-        # เลือกว่าจะควบคุมไฟหรือเครื่องปรับอากาศ
-        # outcome = light_or_airCon(handLandmarks, handLabel)
-        # if outcome == "" :
-        #   outcome = turn_on_or_off(handLandmarks, handLabel)
-        #   if outcome == "" :
-        #       outcome, thumb_y, index_y = adjust_light(handLandmarks, thumb_y, index_y)
-        #       if outcome == "" :
-        #           # thumb_y = None
-        #           # index_y = None
-        #           outcome = adjust_airCon(handLandmarks)
-        #           if outcome == "" :
-        #             outcome = end_work(handLandmarks)
 
         mp_drawing.draw_landmarks( #วาดจุดและเส้นบนมือ
           image, #ภาพจากกล้อง
@@ -272,7 +287,8 @@ with mp_hands.Hands( #ข้อมูลมือ
           mp_drawing_styles.get_default_hand_connections_style()
         )
 
-    cv2.putText(image, str(mode+' '+outcome), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) #แสดงจำนวนนิ้วที่นับได้บนภาพ
+    #แสดงจำนวนนิ้วที่นับได้บนภาพ
+    cv2.putText(image, str(mode+' '+outcome), (50,450), cv2.FONT_HERSHEY_COMPLEX_SMALL, 3, (255,0,0), 10) 
     cv2.imshow('outcomeing Apps',image) #แสดงผลสิ่งที่กล้องจับได้
     if cv2.waitKey(100) == 27: #กด ESC เพื่อออกจากโปรแกรม
         break
