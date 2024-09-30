@@ -226,6 +226,7 @@ with mp_hands.Hands( #ข้อมูลมือ
             elif outcome == "turn off" :
               client.publish("control", payload=2001, qos=2)
               print('turn off', current_light)
+              # mode = "light-off"
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
@@ -240,6 +241,7 @@ with mp_hands.Hands( #ข้อมูลมือ
             elif outcome == "turn off" :
               client.publish("control", payload=1001, qos=2)
               print('turn off')
+              # mode = "airCon-off"
 
             outcome = end_work(handLandmarks)
             if outcome == "end" :
@@ -253,9 +255,11 @@ with mp_hands.Hands( #ข้อมูลมือ
             mqtt_newlight = 0
             if outcome == "increase" :
               mqtt_newlight = 2000 + estimate_light
+              # mode = 'light - increase'
               print('increase')
             elif outcome == "decrease" :
               mqtt_newlight = 2000 + estimate_light
+              # mode = 'light - decrease'
               print('decrease')
             client.publish("control", payload=int(mqtt_newlight), qos=2)
 
@@ -269,9 +273,11 @@ with mp_hands.Hands( #ข้อมูลมือ
             outcome = adjust_airCon(handLandmarks)
             if outcome == "increase" :
               client.publish("control", payload=1003, qos=2)
+              # mode = 'airCon - increase'
               print('increase')
             elif outcome == "decrease" :
               client.publish("control", payload=1004, qos=2)
+              # mode = 'airCon - decrease'
               print('decrease')
 
             outcome = end_work(handLandmarks)
